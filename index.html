@@ -534,54 +534,89 @@ const SUPABASE_URL = "https://ibtpbfxdvqaxqaqspwml.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "ВСТАВЬ_СЮДА_МОЙ_ПОЛНЫЙ_SB_PUBLISHABLE_KEY";
 const SUPABASE_TABLE = "orders";
 
-/* Клиент создаётся лениво: если CDN не ответил, страница продолжает
-   работать — каталог и корзина от Supabase не зависят. */
+/* Клиент создаётся лениво, при первом заказе. Никаких проверок на старте:
+   страница не обращается к Supabase, пока покупатель не нажал «Отправить». */
 let supabaseClient = null;
 function getSupabaseClient(){
   if(supabaseClient) return supabaseClient;
-  if(typeof supabase === "undefined" || typeof supabase.createClient !== "function") return null;
-  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  const sdk = (typeof supabase !== "undefined" && supabase) || window.supabase;
+  if(!sdk || typeof sdk.createClient !== "function") return null;
+  supabaseClient = sdk.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
   return supabaseClient;
 }
-const supabaseConfigured = () =>
-  /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(SUPABASE_URL) &&
-  SUPABASE_PUBLISHABLE_KEY.length > 20 &&
-  !/ВСТАВЬ|YOUR_|PUBLISHABLE_KEY$/i.test(SUPABASE_PUBLISHABLE_KEY);
+/* Скрипт SDK стоит с defer и в редком случае может ещё грузиться в момент
+   нажатия. Ждём его только здесь, по факту отправки, максимум 5 секунд. */
+async function waitForSupabaseSdk(ms){
+  const until = Date.now() + (ms || 5000);
+  while(!getSupabaseClient() && Date.now() < until){
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return getSupabaseClient();
+}
 
-/* Запись заказа. Возвращает {ok:true} либо {ok:false, reason}.
+/* Диагностика — вызвать в консоли браузера: kiloDiag()
+   Ничего не отправляет и ничего не блокирует, просто печатает состояние. */
+function kiloDiag(){
+  const sdk = (typeof supabase !== "undefined" && supabase) || window.supabase;
+  const k = SUPABASE_PUBLISHABLE_KEY || "";
+  console.log("SDK загружен:", !!(sdk && sdk.createClient));
+  console.log("URL:", SUPABASE_URL);
+  console.log("Таблица:", SUPABASE_TABLE);
+  console.log("Ключ: длина", k.length, "| начало", JSON.stringify(k.slice(0,14)), "| конец", JSON.stringify(k.slice(-6)));
+  console.log("Похож на secret (так нельзя!):", /service_role|sb_secret_/i.test(k));
+  console.log("Клиент создаётся:", !!getSupabaseClient());
+}
+
+/* Запись заказа. Возвращает {ok:true} либо {ok:false, reason, error}.
    Данные берутся из готового объекта o — второй раз ничего не собираем. */
 async function saveOrderToSupabase(o){
-  if(!supabaseConfigured()){
-    console.error("Supabase: не заполнен SUPABASE_PUBLISHABLE_KEY — заказ сохранить некуда.");
-    return {ok:false, reason:"config"};
-  }
-  const client = getSupabaseClient();
+  const client = await waitForSupabaseSdk(5000);
   if(!client){
-    console.error("Supabase: SDK не загрузился (проверьте доступ к cdn.jsdelivr.net).");
+    console.error(
+      "Supabase: SDK не загрузился.",
+      "\n  Проверьте, что в <head> есть <script src=\"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2\">",
+      "\n  и что запрос к cdn.jsdelivr.net не блокируется (адблок, корпоративная сеть, офлайн)."
+    );
     return {ok:false, reason:"sdk"};
   }
+  /* Имена полей — ровно как в public.orders. id и created_at ставит база. */
+  const payload = {
+    order_number:   String(o.number),
+    customer_name:  o.name,
+    phone:          o.phone,
+    delivery_type:  o.mode,
+    address:        o.address || null,
+    comment:        o.comment || null,
+    items:          o.items,          // jsonb
+    goods_total:    o.goods,
+    delivery_price: o.shipping,
+    total:          o.total,
+    status:         "new"
+  };
   try{
-    const { error } = await client.from(SUPABASE_TABLE).insert({
-      order_number:   String(o.number),
-      customer_name:  o.name,
-      phone:          o.phone,
-      delivery_type:  o.mode,
-      address:        o.address || null,
-      comment:        o.comment || null,
-      items:          o.items,          // jsonb
-      goods_total:    o.goods,
-      delivery_price: o.shipping,
-      total:          o.total,
-      status:         "new"
-    });
+    const { error } = await client.from(SUPABASE_TABLE).insert(payload);
     if(error){
-      console.error("Supabase: заказ не сохранён", error);
+      console.error(
+        "Supabase: INSERT в " + SUPABASE_TABLE + " не прошёл.",
+        "\n  message:", error.message,
+        "\n  details:", error.details,
+        "\n  hint:",    error.hint,
+        "\n  code:",    error.code,
+        "\n  объект ошибки целиком:", error,
+        "\n  что отправляли:", payload
+      );
       return {ok:false, reason:"insert", error};
     }
     return {ok:true};
   }catch(e){
     /* обрыв сети, блокировщик, CORS — insert может не вернуть error, а упасть */
-    console.error("Supabase: запрос не дошёл", e);
+    console.error(
+      "Supabase: запрос не дошёл до сервера.",
+      "\n  message:", e && e.message,
+      "\n  объект ошибки целиком:", e,
+      "\n  Частые причины: нет сети; неверный SUPABASE_URL; страница открыта",
+      "\n  как file:// или в песочнице, где запрещены запросы на supabase.co."
+    );
     return {ok:false, reason:"network", error:e};
   }
 }
@@ -959,9 +994,7 @@ async function submitOrder(){
   if(!saved.ok){
     btn.disabled=false; btn.textContent="Отправить заказ";
     state.sending=false;
-    showSendError(saved.reason==="config"||saved.reason==="sdk"
-      ? "Заказ временно не оформляется. Напишите нам в Telegram — примем вручную."
-      : "Не удалось сохранить заказ. Проверьте интернет и попробуйте ещё раз.");
+    showSendError("Не удалось сохранить заказ. Проверьте интернет и попробуйте ещё раз.");
     return;
   }
   o.savedAt=new Date().toISOString();
