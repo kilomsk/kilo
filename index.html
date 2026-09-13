@@ -631,12 +631,19 @@ h2{font-size:26px;font-weight:800;line-height:1.1}
       <h2 id="admAuthTitle">Вход для администратора</h2>
       <button class="close" onclick="closeAdminAuth()" aria-label="Закрыть">✕</button>
     </div>
-    <form class="sheet-body" onsubmit="adminLogin(event)">
-      <div class="field" id="f-admpass">
-        <label for="i-admpass">Пароль</label>
-        <input id="i-admpass" type="password" autocomplete="current-password" placeholder="Пароль администратора">
-        <div class="err-msg" id="admAuthErr">Неверный пароль</div>
+    <!-- novalidate: проверку пары делает Supabase, а не браузер —
+         иначе нативная валидация email глушит отправку формы -->
+    <form class="sheet-body" novalidate onsubmit="adminLogin(event)">
+      <div class="field">
+        <label for="i-admmail">Email</label>
+        <input id="i-admmail" type="email" inputmode="email" autocomplete="username"
+               autocapitalize="off" spellcheck="false" placeholder="email@example.com">
       </div>
+      <div class="field">
+        <label for="i-admpass">Пароль</label>
+        <input id="i-admpass" type="password" autocomplete="current-password" placeholder="Пароль">
+      </div>
+      <div class="send-err" id="admAuthErr" role="alert" hidden></div>
       <button class="btn" style="width:100%" id="admLoginBtn" type="submit">Войти</button>
     </form>
   </div>
@@ -710,7 +717,7 @@ const SHOP = {
    для таблицы orders достаточно разрешить INSERT роли anon.
    ============================================================ */
 const SUPABASE_URL = "https://ibtpbfxdvqaxqaqspwml.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_VukJ2JB32uA8XQnrEe7RNQ_Vp_Ul-wF";
+const SUPABASE_PUBLISHABLE_KEY = "ВСТАВЬ_СЮДА_МОЙ_ПОЛНЫЙ_SB_PUBLISHABLE_KEY";
 const SUPABASE_TABLE = "orders";
 
 /* Клиент создаётся лениво, при первом заказе. Никаких проверок на старте:
@@ -1250,7 +1257,6 @@ function renderDone(body,foot,title){
    Пароль нигде не хранится — его вводит владелец, проверяет Supabase.
    Код магазина ниже не задействован: админка живёт отдельным слоем.
    ============================================================ */
-const ADMIN_EMAIL = "Gleb.ivasyuk@yandex.ru";
 const STATUSES = [
   {id:"new",        label:"Новый"},
   {id:"confirmed",  label:"Подтверждён"},
@@ -1268,51 +1274,104 @@ const PERIODS = [
 ];
 const adm = {rows:[], period:"today", q:"", loading:false, error:null, detail:null};
 
-/* ---- вход ---- */
-async function openAdmin(){
-  const client = await waitForSupabaseSdk(5000);
-  if(!client){ alert("Не удалось подключиться. Проверьте интернет и попробуйте ещё раз."); return; }
-  let session=null;
-  try{ const {data} = await client.auth.getSession(); session = data && data.session; }
-  catch(e){ console.error("Supabase Auth: getSession", e); }
-  if(session){ enterAdmin(); return; }          // сессия жива — пароль не спрашиваем
-  const box=document.getElementById("adminAuth");
-  box.classList.add("open"); document.body.style.overflow="hidden";
-  document.getElementById("f-admpass").classList.remove("err");
-  const inp=document.getElementById("i-admpass"); inp.value=""; setTimeout(()=>inp.focus(),80);
+/* ---- вход ----
+   Форма открывается ТОЛЬКО по кнопке «Администратор» в подвале.
+   Магазин никогда не просит авторизацию: покупателю Supabase Auth не нужен.
+   Email и пароль вводит человек, локальных сравнений нет — решение
+   принимает Supabase, а права на заказы дальше выдаёт RLS по UID.        */
+let admAuthBusy = false;
+
+function showAdminAuthError(msg){
+  const el=document.getElementById("admAuthErr");
+  if(!el) return;
+  el.textContent=msg||""; el.hidden=!msg;
+}
+function openAdminAuth(msg){
+  document.getElementById("adminAuth").classList.add("open");
+  document.body.style.overflow="hidden";
+  const mail=document.getElementById("i-admmail"), pass=document.getElementById("i-admpass");
+  pass.value="";
+  showAdminAuthError(msg||"");
+  setTimeout(()=>{ (mail.value?pass:mail).focus(); },80);
 }
 function closeAdminAuth(){
   document.getElementById("adminAuth").classList.remove("open");
   document.body.style.overflow="";
 }
+async function openAdmin(){
+  const client = await waitForSupabaseSdk(5000);
+  if(client){
+    try{
+      const {data} = await client.auth.getSession();
+      if(data && data.session){ enterAdmin(); return; }   // сессия жива — вход не спрашиваем
+    }catch(e){ console.error("Supabase Auth: getSession", e); }
+  }
+  openAdminAuth(client ? "" : "Не удалось подключиться к серверу. Попробуйте ещё раз.");
+}
+
+/* Сбой связи — это не «неверный пароль». Supabase отдаёт 400 на неправильные
+   данные, а AuthRetryableFetchError / TypeError / 5xx означают, что запрос
+   просто не дошёл. Разводим эти случаи по разным сообщениям. */
+function isAuthNetworkError(e){
+  if(!e) return false;
+  const name=String(e.name||""), msg=String(e.message||"");
+  if(/AuthRetryableFetchError|TypeError|NetworkError|FetchError|AbortError/i.test(name)) return true;
+  if(/failed to fetch|networkerror|network error|load failed|type error|timeout|offline/i.test(msg)) return true;
+  const s=Number(e.status);
+  if(!isNaN(s) && (s===0 || s>=500)) return true;
+  return false;
+}
+
 async function adminLogin(e){
   e.preventDefault();
+  if(admAuthBusy) return;                       // без двойных запросов авторизации
   const btn=document.getElementById("admLoginBtn"),
-        inp=document.getElementById("i-admpass"),
-        field=document.getElementById("f-admpass");
-  const password=inp.value;
-  if(!password){ field.classList.add("err"); inp.focus(); return; }
-  const client=getSupabaseClient();
-  if(!client){ console.error("Supabase Auth: SDK недоступен"); field.classList.add("err"); return; }
-  btn.disabled=true; btn.textContent="Проверяем…"; field.classList.remove("err");
+        mailEl=document.getElementById("i-admmail"),
+        passEl=document.getElementById("i-admpass");
+  const email=mailEl.value.trim().toLowerCase();
+  const password=passEl.value;
+  showAdminAuthError("");
+  if(!email || !password){
+    showAdminAuthError("Введите email и пароль.");
+    (email?passEl:mailEl).focus();
+    return;
+  }
+  /* Флаг ставим до первого await — иначе второй клик успевает проскочить. */
+  admAuthBusy=true; btn.disabled=true; btn.textContent="Входим…";
   try{
-    /* Пароль уходит прямо в Supabase Auth и нигде не сохраняется. */
-    const {error}=await client.auth.signInWithPassword({email:ADMIN_EMAIL, password:password});
-    if(error){
-      console.error("Supabase Auth: вход не выполнен", error);
-      field.classList.add("err"); inp.select();
+    const client=await waitForSupabaseSdk(5000);
+    if(!client){
+      console.error("Supabase Auth: SDK не загрузился — запрос отправить нечем.");
+      showAdminAuthError("Не удалось подключиться к серверу. Попробуйте ещё раз.");
       return;
     }
-    inp.value="";
+    /* Пара email+пароль уходит прямо в Supabase Auth и нигде не сохраняется. */
+    const {error}=await client.auth.signInWithPassword({email:email, password:password});
+    if(error){
+      console.error(
+        "Supabase Auth: вход не выполнен.",
+        "\n  name:",    error.name,
+        "\n  status:",  error.status,
+        "\n  message:", error.message,
+        "\n  объект ошибки целиком:", error
+      );
+      showAdminAuthError(isAuthNetworkError(error)
+        ? "Не удалось подключиться к серверу. Попробуйте ещё раз."
+        : "Неверный email или пароль.");
+      passEl.select();
+      return;
+    }
+    passEl.value=""; mailEl.value="";
     closeAdminAuth();
     enterAdmin();
   }catch(err){
-    console.error("Supabase Auth: запрос не дошёл", err);
-    field.classList.add("err");
+    console.error("Supabase Auth: запрос не дошёл.", "\n  name:", err && err.name, "\n  message:", err && err.message, "\n  объект ошибки целиком:", err);
+    showAdminAuthError("Не удалось подключиться к серверу. Попробуйте ещё раз.");
   }finally{
-    btn.disabled=false; btn.textContent="Войти";
+    admAuthBusy=false; btn.disabled=false; btn.textContent="Войти";
   }
 }
+
 function enterAdmin(){
   closeAdminAuth();
   document.getElementById("adminApp").hidden=false;
@@ -1355,7 +1414,11 @@ async function loadAdminOrders(){
         "\n  code:",    error.code,
         "\n  объект ошибки целиком:", error
       );
-      adm.error="select"; adm.rows=[];
+      /* 42501 / PGRST301 — авторизация прошла, но RLS не даёт этому UID
+         читать orders. Обходить её нельзя, честно говорим об этом. */
+      adm.error=/42501|PGRST301|permission denied|row-level security/i
+        .test([error.code,error.message].join(" ")) ? "denied" : "select";
+      adm.rows=[];
     }else{
       adm.rows=Array.isArray(data)?data:[];
     }
@@ -1433,8 +1496,10 @@ function renderAdmin(){
   if(adm.loading){ box.innerHTML=`<div class="adm-msg">Загружаем заказы…</div>`; return; }
   if(adm.error){
     box.innerHTML=`<div class="adm-msg">
-      <b>Не удалось загрузить заказы</b>
-      Подробности — в консоли браузера.
+      <b>${adm.error==="denied" ? "Нет доступа к заказам" : "Не удалось загрузить заказы"}</b>
+      ${adm.error==="denied"
+        ? "Этот пользователь авторизован, но правила доступа Supabase не разрешают ему читать заказы."
+        : "Подробности — в консоли браузера."}
       <button class="btn" onclick="loadAdminOrders()">Повторить</button>
     </div>`;
     return;
