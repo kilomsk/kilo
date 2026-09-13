@@ -329,6 +329,121 @@ h2{font-size:26px;font-weight:800;line-height:1.1}
 .fallback summary{cursor:pointer;list-style:none;font-size:13px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:2px;padding:6px 0}
 .fallback summary::-webkit-details-marker{display:none}
 
+/* ---------- режим администратора ----------
+   Отдельный слой поверх магазина. Разметка магазина не тронута:
+   админка показывается и прячется целиком, как оверлей.        */
+.adm-entry{
+  margin-left:auto;font-size:12.5px;color:var(--ink-soft);
+  text-decoration:underline;text-underline-offset:3px;
+  padding:10px 2px;min-height:44px;opacity:.75;
+}
+.adm-entry:hover{opacity:1;color:var(--ink)}
+#adminApp{position:fixed;inset:0;z-index:80;background:var(--cream);overflow-y:auto;-webkit-overflow-scrolling:touch}
+#adminApp[hidden]{display:none}
+#admDetail{z-index:90}   /* подробности — поверх экрана заказов */
+.adm-hdr{position:sticky;top:0;z-index:2;background:rgba(239,232,220,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.adm-hdr-in{max-width:var(--maxw);margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.adm-title{display:flex;align-items:baseline;gap:10px;min-width:0}
+.adm-title b{font-family:var(--f-display);font-weight:900;font-size:22px;letter-spacing:-.03em;line-height:1}
+.adm-title span{font-family:var(--f-display);font-weight:700;font-size:16px;display:flex;align-items:baseline;gap:8px}
+.adm-title i{font-style:normal;font-size:12px;font-weight:600;color:var(--kraft-deep)}
+.adm-actions{display:flex;gap:8px;flex:0 0 auto}
+.adm-link{
+  padding:9px 13px;border-radius:100px;box-shadow:inset 0 0 0 1px var(--line);
+  background:var(--paper);font-family:var(--f-display);font-weight:600;font-size:13px;
+  color:var(--ink-2);min-height:38px;
+}
+.adm-link:hover{box-shadow:inset 0 0 0 1px var(--kraft)}
+.adm-wrap{max-width:var(--maxw);margin:0 auto;padding:16px 16px 40px}
+.adm-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.adm-stat{background:var(--paper);padding:12px 13px}
+.adm-stat u{display:block;text-decoration:none;font-family:var(--f-display);font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:3px}
+.adm-stat b{font-family:var(--f-display);font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.adm-tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:center}
+.adm-periods{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:1 1 100%}
+.adm-periods::-webkit-scrollbar{display:none}
+.adm-per{
+  flex:0 0 auto;padding:8px 14px;border-radius:100px;box-shadow:inset 0 0 0 1px var(--line);
+  font-family:var(--f-display);font-weight:600;font-size:13.5px;color:var(--ink-soft);white-space:nowrap;min-height:38px;
+}
+.adm-per[aria-pressed="true"]{background:var(--ink);color:var(--paper);box-shadow:none}
+.adm-search{
+  flex:1 1 200px;min-width:0;padding:11px 14px;border-radius:var(--r);border:1px solid var(--line);
+  background:var(--paper);font:inherit;font-size:16px;color:var(--ink);
+}
+.adm-search:focus{outline:none;border-color:var(--ink)}
+.adm-csv{
+  flex:0 0 auto;padding:11px 16px;border-radius:100px;background:var(--ink);color:var(--paper);
+  font-family:var(--f-display);font-weight:700;font-size:13.5px;min-height:42px;
+}
+.adm-csv:hover{background:var(--ink-2)}
+.adm-csv[disabled]{opacity:.4;cursor:not-allowed}
+.st{
+  display:inline-block;padding:4px 9px;border-radius:100px;font-family:var(--f-display);
+  font-size:11px;font-weight:600;letter-spacing:.04em;white-space:nowrap;
+  background:var(--cream-deep);color:var(--ink-2);
+}
+.st-new{background:var(--ink);color:var(--paper)}
+.st-confirmed{background:#EADFCB;color:var(--kraft-deep)}
+.st-assembling{background:#EADFCB;color:var(--kraft-deep)}
+.st-ready{background:#DFE9DA;color:var(--ok)}
+.st-delivered{background:transparent;color:var(--ink-soft);box-shadow:inset 0 0 0 1px var(--line)}
+.st-cancelled{background:transparent;color:var(--ink-soft);box-shadow:inset 0 0 0 1px var(--line);text-decoration:line-through}
+/* мобильные карточки */
+.adm-cards{display:grid;gap:10px}
+.adm-card{
+  width:100%;text-align:left;background:var(--paper);border:1px solid var(--line);
+  border-radius:var(--r);padding:13px 14px;display:block;
+}
+.adm-card.is-new{border-color:var(--kraft);box-shadow:inset 3px 0 0 var(--kraft-deep)}
+.adm-card:hover{border-color:var(--kraft)}
+.adm-c-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px}
+.adm-c-num{font-family:var(--f-display);font-weight:800;font-size:15.5px}
+.adm-c-date{font-size:12.5px;color:var(--ink-soft);margin-bottom:9px}
+.adm-c-who{font-family:var(--f-display);font-weight:700;font-size:15px;line-height:1.25}
+.adm-c-phone{font-size:13.5px;color:var(--ink-2);margin-bottom:9px}
+.adm-c-items{font-size:13.5px;color:var(--ink-2);line-height:1.4;margin-bottom:9px}
+.adm-c-way{font-size:13px;color:var(--ink-soft);line-height:1.4;margin-bottom:9px}
+.adm-c-way b{font-family:var(--f-display);font-weight:700;color:var(--ink-2);font-size:13px}
+.adm-c-sum{font-family:var(--f-display);font-weight:800;font-size:17px;font-variant-numeric:tabular-nums}
+/* десктопная таблица */
+.adm-table{display:none;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.adm-table table{width:100%;border-collapse:collapse;font-size:13.5px}
+.adm-table th{
+  text-align:left;font-family:var(--f-display);font-size:10.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;
+}
+.adm-table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink-2)}
+.adm-table tr:last-child td{border-bottom:0}
+.adm-table tbody tr{cursor:pointer}
+.adm-table tbody tr:hover{background:var(--cream)}
+.adm-table tbody tr.is-new td:first-child{box-shadow:inset 3px 0 0 var(--kraft-deep)}
+.adm-t-num{font-family:var(--f-display);font-weight:800;color:var(--ink);white-space:nowrap}
+.adm-t-name{font-family:var(--f-display);font-weight:700;color:var(--ink)}
+.adm-t-sum{font-family:var(--f-display);font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.adm-t-items{color:var(--ink-soft);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-t-nowrap{white-space:nowrap}
+/* состояния */
+.adm-msg{text-align:center;padding:40px 16px;color:var(--ink-soft);font-size:15px}
+.adm-msg b{display:block;font-family:var(--f-display);font-weight:700;font-size:17px;color:var(--ink);margin-bottom:6px}
+.adm-msg .btn{margin-top:16px}
+/* подробная карточка */
+.adm-d-row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;font-size:14.5px}
+.adm-d-row span:first-child{color:var(--ink-soft)}
+.adm-d-row span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.adm-d-sec{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+.adm-d-sec h4{font-family:var(--f-display);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px}
+.adm-d-big{font-family:var(--f-display);font-weight:800;font-size:19px;font-variant-numeric:tabular-nums}
+.adm-d-phone{color:var(--ink);font-family:var(--f-display);font-weight:700;font-size:16px;text-decoration:none;border-bottom:1px solid var(--kraft)}
+.adm-d-note{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;font-size:14px;color:var(--ink-2);white-space:pre-wrap}
+.adm-status-pick{display:flex;flex-wrap:wrap;gap:6px}
+.adm-status-pick button{
+  padding:8px 13px;border-radius:100px;box-shadow:inset 0 0 0 1px var(--line);
+  font-family:var(--f-display);font-weight:600;font-size:13px;color:var(--ink-soft);min-height:38px;
+}
+.adm-status-pick button[aria-pressed="true"]{background:var(--ink);color:var(--paper);box-shadow:none}
+.adm-status-pick button[disabled]{opacity:.5;cursor:wait}
+
 @media (min-width:640px){
   .grid{grid-template-columns:repeat(3,1fr);gap:16px}
   .facts{grid-template-columns:repeat(4,1fr)}
@@ -348,6 +463,13 @@ h2{font-size:26px;font-weight:800;line-height:1.1}
   .set-media img{width:100%;height:100%;object-fit:cover;min-height:340px;aspect-ratio:auto}
   .set-body{padding:34px;align-content:center}
   .gift{padding:40px 34px}
+}
+@media (min-width:760px){
+  .adm-stats{grid-template-columns:repeat(4,1fr)}
+  .adm-periods{flex:0 0 auto}
+  .adm-cards{display:none}
+  .adm-table{display:block}
+  .adm-wrap{padding:22px 16px 56px}
   .faq{display:grid;grid-template-columns:1fr;max-width:760px}
 }
 </style>
@@ -475,6 +597,7 @@ h2{font-size:26px;font-weight:800;line-height:1.1}
       <a class="soc" href="https://t.me/kilonuts" target="_blank" rel="noopener" aria-label="Telegram-канал КИЛО"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21.94 4.3 18.9 19.1c-.23 1.02-.84 1.27-1.7.79l-4.7-3.46-2.27 2.18c-.25.25-.46.46-.94.46l.34-4.78 8.7-7.86c.38-.34-.08-.53-.59-.19L6.99 12.9 2.35 11.45c-1.01-.32-1.03-1.01.21-1.5l18.13-6.99c.84-.31 1.57.19 1.25 3.34z"/></svg>Telegram-канал</a>
       <a class="soc" href="https://www.instagram.com/kilo_msk/" target="_blank" rel="noopener" aria-label="Instagram КИЛО"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.48-1.38-.9-.42-.42-.68-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.42 2.17 8.8 2.16 12 2.16zm0 2.16c-3.14 0-3.51.01-4.75.07-1.15.05-1.77.24-2.18.4-.55.22-.94.47-1.35.88-.41.41-.66.8-.88 1.35-.16.41-.35 1.03-.4 2.18-.06 1.24-.07 1.61-.07 4.75s.01 3.51.07 4.75c.05 1.15.24 1.77.4 2.18.22.55.47.94.88 1.35.41.41.8.66 1.35.88.41.16 1.03.35 2.18.4 1.24.06 1.61.07 4.75.07s3.51-.01 4.75-.07c1.15-.05 1.77-.24 2.18-.4.55-.22.94-.47 1.35-.88.41-.41.66-.8.88-1.35.16-.41.35-1.03.4-2.18.06-1.24.07-1.61.07-4.75s-.01-3.51-.07-4.75c-.05-1.15-.24-1.77-.4-2.18a3.6 3.6 0 0 0-.88-1.35 3.6 3.6 0 0 0-1.35-.88c-.41-.16-1.03-.35-2.18-.4-1.24-.06-1.61-.07-4.75-.07zm0 3.68a5.99 5.99 0 1 1 0 11.98 5.99 5.99 0 0 1 0-11.98zm0 9.88a3.89 3.89 0 1 0 0-7.78 3.89 3.89 0 0 0 0 7.78zm7.63-10.12a1.4 1.4 0 1 1-2.8 0 1.4 1.4 0 0 1 2.8 0z"/></svg>@kilo_msk</a>
       <span>Орехи и сухофрукты · Москва и МО</span>
+      <button class="adm-entry" type="button" onclick="openAdmin()">Администратор</button>
     </div>
   </footer>
 </main>
@@ -497,6 +620,62 @@ h2{font-size:26px;font-weight:800;line-height:1.1}
     </div>
     <div class="sheet-body" id="sheetBody"></div>
     <div class="sheet-foot" id="sheetFoot"></div>
+  </div>
+</div>
+
+<!-- ===== вход для администратора (только пароль) ===== -->
+<div class="sheet" id="adminAuth" role="dialog" aria-modal="true" aria-labelledby="admAuthTitle">
+  <div class="sheet-bg" onclick="closeAdminAuth()"></div>
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="admAuthTitle">Вход для администратора</h2>
+      <button class="close" onclick="closeAdminAuth()" aria-label="Закрыть">✕</button>
+    </div>
+    <form class="sheet-body" onsubmit="adminLogin(event)">
+      <div class="field" id="f-admpass">
+        <label for="i-admpass">Пароль</label>
+        <input id="i-admpass" type="password" autocomplete="current-password" placeholder="Пароль администратора">
+        <div class="err-msg" id="admAuthErr">Неверный пароль</div>
+      </div>
+      <button class="btn" style="width:100%" id="admLoginBtn" type="submit">Войти</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== режим «Заказы» ===== -->
+<div id="adminApp" hidden>
+  <div class="adm-hdr">
+    <div class="adm-hdr-in">
+      <div class="adm-title">
+        <b>КИЛО</b>
+        <span>Заказы <i id="admNew"></i></span>
+      </div>
+      <div class="adm-actions">
+        <button class="adm-link" onclick="exitAdmin()">В магазин</button>
+        <button class="adm-link" onclick="adminSignOut()">Выйти</button>
+      </div>
+    </div>
+  </div>
+  <div class="adm-wrap">
+    <div class="adm-stats" id="admStats"></div>
+    <div class="adm-tools">
+      <div class="adm-periods" id="admPeriods"></div>
+      <input class="adm-search" id="admSearch" type="search" placeholder="Номер, имя, телефон, адрес" oninput="setAdminQuery(this.value)" aria-label="Поиск по заказам">
+      <button class="adm-csv" id="admCsv" onclick="downloadOrdersCsv()">Скачать CSV</button>
+    </div>
+    <div id="admContent"></div>
+  </div>
+</div>
+
+<!-- ===== подробности заказа ===== -->
+<div class="sheet" id="admDetail" role="dialog" aria-modal="true" aria-labelledby="admDetailTitle">
+  <div class="sheet-bg" onclick="closeOrderDetail()"></div>
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <h2 id="admDetailTitle">Заказ</h2>
+      <button class="close" onclick="closeOrderDetail()" aria-label="Закрыть">✕</button>
+    </div>
+    <div class="sheet-body" id="admDetailBody"></div>
   </div>
 </div>
 
@@ -531,7 +710,7 @@ const SHOP = {
    для таблицы orders достаточно разрешить INSERT роли anon.
    ============================================================ */
 const SUPABASE_URL = "https://ibtpbfxdvqaxqaqspwml.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_VukJ2JB32uA8XQnrEe7RNQ_Vp_Ul-wF";
+const SUPABASE_PUBLISHABLE_KEY = "ВСТАВЬ_СЮДА_МОЙ_ПОЛНЫЙ_SB_PUBLISHABLE_KEY";
 const SUPABASE_TABLE = "orders";
 
 /* Клиент создаётся лениво, при первом заказе. Никаких проверок на старте:
@@ -1061,6 +1240,374 @@ function renderDone(body,foot,title){
   foot.innerHTML=`
     <a class="btn" style="width:100%" href="${buildTelegramOrderLink(o)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21.94 4.3 18.9 19.1c-.23 1.02-.84 1.27-1.7.79l-4.7-3.46-2.27 2.18c-.25.25-.46.46-.94.46l.34-4.78 8.7-7.86c.38-.34-.08-.53-.59-.19L6.99 12.9 2.35 11.45c-1.01-.32-1.03-1.01.21-1.5l18.13-6.99c.84-.31 1.57.19 1.25 3.34z"/></svg>Открыть Telegram</a>
     <button class="del" style="display:block;width:100%;margin-top:12px;text-align:center" onclick="closeSheet()">Готово</button>`;
+}
+
+/* ============================================================
+   9. РЕЖИМ АДМИНИСТРАТОРА — «Заказы»
+   Работает на том же supabaseClient и том же publishable-ключе.
+   Данные видит только тот, кто прошёл Supabase Auth: RLS отдаёт
+   SELECT/UPDATE orders единственному пользователю-владельцу.
+   Пароль нигде не хранится — его вводит владелец, проверяет Supabase.
+   Код магазина ниже не задействован: админка живёт отдельным слоем.
+   ============================================================ */
+const ADMIN_EMAIL = "Gleb.ivasyuk@yandex.ru";
+const STATUSES = [
+  {id:"new",        label:"Новый"},
+  {id:"confirmed",  label:"Подтверждён"},
+  {id:"assembling", label:"Собирается"},
+  {id:"ready",      label:"Готов"},
+  {id:"delivered",  label:"Доставлен"},
+  {id:"cancelled",  label:"Отменён"}
+];
+const stLabel = s => (STATUSES.find(x=>x.id===s)||{label:s||"—"}).label;
+const PERIODS = [
+  {id:"today", label:"Сегодня"},
+  {id:"week",  label:"Неделя"},
+  {id:"month", label:"Месяц"},
+  {id:"all",   label:"Всё время"}
+];
+const adm = {rows:[], period:"today", q:"", loading:false, error:null, detail:null};
+
+/* ---- вход ---- */
+async function openAdmin(){
+  const client = await waitForSupabaseSdk(5000);
+  if(!client){ alert("Не удалось подключиться. Проверьте интернет и попробуйте ещё раз."); return; }
+  let session=null;
+  try{ const {data} = await client.auth.getSession(); session = data && data.session; }
+  catch(e){ console.error("Supabase Auth: getSession", e); }
+  if(session){ enterAdmin(); return; }          // сессия жива — пароль не спрашиваем
+  const box=document.getElementById("adminAuth");
+  box.classList.add("open"); document.body.style.overflow="hidden";
+  document.getElementById("f-admpass").classList.remove("err");
+  const inp=document.getElementById("i-admpass"); inp.value=""; setTimeout(()=>inp.focus(),80);
+}
+function closeAdminAuth(){
+  document.getElementById("adminAuth").classList.remove("open");
+  document.body.style.overflow="";
+}
+async function adminLogin(e){
+  e.preventDefault();
+  const btn=document.getElementById("admLoginBtn"),
+        inp=document.getElementById("i-admpass"),
+        field=document.getElementById("f-admpass");
+  const password=inp.value;
+  if(!password){ field.classList.add("err"); inp.focus(); return; }
+  const client=getSupabaseClient();
+  if(!client){ console.error("Supabase Auth: SDK недоступен"); field.classList.add("err"); return; }
+  btn.disabled=true; btn.textContent="Проверяем…"; field.classList.remove("err");
+  try{
+    /* Пароль уходит прямо в Supabase Auth и нигде не сохраняется. */
+    const {error}=await client.auth.signInWithPassword({email:ADMIN_EMAIL, password:password});
+    if(error){
+      console.error("Supabase Auth: вход не выполнен", error);
+      field.classList.add("err"); inp.select();
+      return;
+    }
+    inp.value="";
+    closeAdminAuth();
+    enterAdmin();
+  }catch(err){
+    console.error("Supabase Auth: запрос не дошёл", err);
+    field.classList.add("err");
+  }finally{
+    btn.disabled=false; btn.textContent="Войти";
+  }
+}
+function enterAdmin(){
+  closeAdminAuth();
+  document.getElementById("adminApp").hidden=false;
+  document.body.style.overflow="hidden";
+  adm.period="today"; adm.q="";
+  const s=document.getElementById("admSearch"); if(s) s.value="";
+  renderAdmin();
+  loadAdminOrders();
+}
+function exitAdmin(){                      // сессию не трогаем
+  document.getElementById("adminApp").hidden=true;
+  document.body.style.overflow="";
+  closeOrderDetail();
+}
+async function adminSignOut(){
+  const client=getSupabaseClient();
+  try{ if(client) await client.auth.signOut(); }
+  catch(e){ console.error("Supabase Auth: signOut", e); }
+  adm.rows=[]; adm.error=null; adm.detail=null;   // данные заказов уходят из памяти
+  exitAdmin();
+}
+
+/* ---- загрузка ---- */
+async function loadAdminOrders(){
+  const client=getSupabaseClient();
+  if(!client){ adm.error="sdk"; renderAdmin(); return; }
+  adm.loading=true; adm.error=null; renderAdmin();
+  try{
+    const {data,error}=await client
+      .from(SUPABASE_TABLE)
+      .select("*")
+      .order("created_at",{ascending:false})
+      .limit(2000);
+    if(error){
+      console.error(
+        "Supabase: не удалось загрузить заказы.",
+        "\n  message:", error.message,
+        "\n  details:", error.details,
+        "\n  hint:",    error.hint,
+        "\n  code:",    error.code,
+        "\n  объект ошибки целиком:", error
+      );
+      adm.error="select"; adm.rows=[];
+    }else{
+      adm.rows=Array.isArray(data)?data:[];
+    }
+  }catch(e){
+    console.error("Supabase: запрос заказов не дошёл", e);
+    adm.error="network"; adm.rows=[];
+  }
+  adm.loading=false;
+  renderAdmin();
+}
+
+/* ---- период, поиск, выборка ---- */
+function periodStart(id){
+  const d=new Date(); d.setHours(0,0,0,0);
+  if(id==="today") return d.getTime();
+  if(id==="week")  return d.getTime()-6*864e5;
+  if(id==="month") return d.getTime()-29*864e5;
+  return 0;
+}
+function setAdminPeriod(id){ adm.period=id; renderAdmin(); }
+function setAdminQuery(v){ adm.q=v; renderAdmin(); }
+const digitsOnly = s => String(s==null?"":s).replace(/\D/g,"");
+function admVisible(){
+  const from=periodStart(adm.period);
+  const q=adm.q.trim().toLowerCase();
+  const qd=digitsOnly(adm.q);
+  return adm.rows.filter(r=>{
+    const t=new Date(r.created_at).getTime();
+    if(!(t>=from)) return false;
+    if(!q) return true;
+    const hay=[r.order_number,r.customer_name,r.phone,r.address].map(x=>String(x==null?"":x).toLowerCase()).join(" ");
+    if(hay.includes(q)) return true;
+    return qd.length>=3 && digitsOnly(r.phone).includes(qd);
+  });
+}
+const admItems = r => Array.isArray(r.items) ? r.items
+  : (typeof r.items==="string" ? (()=>{ try{ const v=JSON.parse(r.items); return Array.isArray(v)?v:[]; }catch(e){ return []; } })() : []);
+const admShort = r => admItems(r).map(i=>`${i.name} ×${i.qty}`).join(", ") || "—";
+const admWay   = r => r.delivery_type==="pickup" ? "Самовывоз" : "Доставка";
+function admDate(iso){
+  const d=new Date(iso); if(isNaN(d)) return "—";
+  const t=new Date(); t.setHours(0,0,0,0);
+  const time=d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
+  const day=d.getTime()-d.getHours()*36e5;
+  if(d>=t) return "Сегодня, "+time;
+  if(d.getTime()>=t.getTime()-864e5) return "Вчера, "+time;
+  return d.toLocaleDateString("ru-RU",{day:"numeric",month:"short"})+", "+time;
+}
+
+/* ---- отрисовка ---- */
+function renderAdmin(){
+  const list=admVisible();
+  const live=list.filter(r=>r.status!=="cancelled");
+  const revenue=live.reduce((s,r)=>s+(Number(r.total)||0),0);
+  const newCount=list.filter(r=>r.status==="new").length;
+  const avg=live.length?Math.round(revenue/live.length):0;
+
+  const badge=document.getElementById("admNew");
+  const allNew=adm.rows.filter(r=>r.status==="new").length;
+  badge.textContent=allNew?"· "+allNew+" "+plural(allNew,["новый","новых","новых"]):"";
+
+  document.getElementById("admStats").innerHTML=[
+    ["Заказов", list.length],
+    ["Выручка", money(revenue)],
+    ["Новых",   newCount],
+    ["Средний чек", money(avg)]
+  ].map(([t,v])=>`<div class="adm-stat"><u>${t}</u><b>${v}</b></div>`).join("");
+
+  document.getElementById("admPeriods").innerHTML=PERIODS.map(p=>
+    `<button class="adm-per" aria-pressed="${adm.period===p.id}" onclick="setAdminPeriod('${p.id}')">${p.label}</button>`
+  ).join("");
+  document.getElementById("admCsv").disabled=!list.length;
+
+  const box=document.getElementById("admContent");
+  if(adm.loading){ box.innerHTML=`<div class="adm-msg">Загружаем заказы…</div>`; return; }
+  if(adm.error){
+    box.innerHTML=`<div class="adm-msg">
+      <b>Не удалось загрузить заказы</b>
+      Подробности — в консоли браузера.
+      <button class="btn" onclick="loadAdminOrders()">Повторить</button>
+    </div>`;
+    return;
+  }
+  if(!list.length){
+    box.innerHTML=`<div class="adm-msg"><b>Заказов за выбранный период нет</b>${
+      adm.q?"Попробуйте изменить запрос или период.":"Как только заказ придёт — он появится здесь."}</div>`;
+    return;
+  }
+  box.innerHTML=`
+    <div class="adm-cards">${list.map(admCard).join("")}</div>
+    <div class="adm-table"><table>
+      <thead><tr>
+        <th>№</th><th>Дата</th><th>Клиент</th><th>Телефон</th>
+        <th>Заказ</th><th>Получение</th><th style="text-align:right">Сумма</th><th>Статус</th>
+      </tr></thead>
+      <tbody>${list.map(admRow).join("")}</tbody>
+    </table></div>`;
+}
+function admCard(r){
+  /* div, а не button: внутри блочная вёрстка, в кнопке она невалидна */
+  return `<div class="adm-card${r.status==="new"?" is-new":""}" role="button" tabindex="0"
+       onclick="openOrderDetail('${r.id}')"
+       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOrderDetail('${r.id}')}">
+    <div class="adm-c-top">
+      <span class="adm-c-num">№ ${esc(r.order_number)}</span>
+      <span class="st st-${esc(r.status||"new")}">${esc(stLabel(r.status))}</span>
+    </div>
+    <div class="adm-c-date">${admDate(r.created_at)}</div>
+    <div class="adm-c-who">${esc(r.customer_name)}</div>
+    <div class="adm-c-phone">${esc(r.phone)}</div>
+    <div class="adm-c-items">${admItems(r).map(i=>`${esc(i.name)} ${esc(i.variant)} × ${i.qty}`).join("<br>")||"—"}</div>
+    <div class="adm-c-way"><b>${admWay(r)}</b>${r.address?"<br>"+esc(r.address):""}</div>
+    <div class="adm-c-sum">${money(Number(r.total)||0)}</div>
+  </div>`;
+}
+function admRow(r){
+  return `<tr class="${r.status==="new"?"is-new":""}" onclick="openOrderDetail('${r.id}')">
+    <td class="adm-t-num">${esc(r.order_number)}</td>
+    <td class="adm-t-nowrap">${admDate(r.created_at)}</td>
+    <td class="adm-t-name">${esc(r.customer_name)}</td>
+    <td class="adm-t-nowrap">${esc(r.phone)}</td>
+    <td class="adm-t-items" title="${esc(admShort(r))}">${esc(admShort(r))}</td>
+    <td>${admWay(r)}</td>
+    <td class="adm-t-sum">${money(Number(r.total)||0)}</td>
+    <td><span class="st st-${esc(r.status||"new")}">${esc(stLabel(r.status))}</span></td>
+  </tr>`;
+}
+
+/* ---- подробности заказа ---- */
+function openOrderDetail(id){
+  const r=adm.rows.find(x=>String(x.id)===String(id));
+  if(!r) return;
+  adm.detail=r;
+  document.getElementById("admDetail").classList.add("open");
+  renderOrderDetail();
+}
+function closeOrderDetail(){
+  document.getElementById("admDetail").classList.remove("open");
+  adm.detail=null;
+}
+function renderOrderDetail(msg){
+  const r=adm.detail; if(!r) return;
+  document.getElementById("admDetailTitle").textContent="Заказ № "+r.order_number;
+  const items=admItems(r);
+  document.getElementById("admDetailBody").innerHTML=`
+    <p style="margin:0 0 14px;color:var(--ink-soft);font-size:13.5px">${admDate(r.created_at)}</p>
+
+    <div class="adm-d-sec" style="border-top:0;margin-top:0;padding-top:0">
+      <h4>Клиент</h4>
+      <div style="font-family:var(--f-display);font-weight:700;font-size:17px;margin-bottom:6px">${esc(r.customer_name)}</div>
+      <a class="adm-d-phone" href="tel:${esc(digitsOnly(r.phone)?("+"+digitsOnly(r.phone)):"")}">${esc(r.phone)}</a>
+    </div>
+
+    <div class="adm-d-sec">
+      <h4>${admWay(r)}</h4>
+      <div style="font-size:14.5px;color:var(--ink-2)">${r.delivery_type==="pickup" ? esc(SHOP.pickupPoint) : (esc(r.address)||"адрес не указан")}</div>
+    </div>
+
+    <div class="adm-d-sec">
+      <h4>Состав заказа</h4>
+      ${items.length?items.map(i=>`<div class="adm-d-row"><span>${esc(i.name)}, ${esc(i.variant)} × ${i.qty}</span><span>${money(Number(i.sum)||0)}</span></div>`).join("")
+                   :`<div class="adm-d-row"><span>Состав не записан</span><span>—</span></div>`}
+    </div>
+
+    <div class="adm-d-sec">
+      <div class="adm-d-row"><span>Товары</span><span>${money(Number(r.goods_total)||0)}</span></div>
+      <div class="adm-d-row"><span>${r.delivery_type==="pickup"?"Самовывоз":"Доставка"}</span><span>${money(Number(r.delivery_price)||0)}</span></div>
+      <div class="adm-d-row"><span style="color:var(--ink)!important">Итого</span><span class="adm-d-big">${money(Number(r.total)||0)}</span></div>
+    </div>
+
+    ${r.comment?`<div class="adm-d-sec"><h4>Комментарий</h4><div class="adm-d-note">${esc(r.comment)}</div></div>`:""}
+
+    <div class="adm-d-sec">
+      <h4>Статус</h4>
+      <div class="adm-status-pick" id="admStatusPick">
+        ${STATUSES.map(s=>`<button type="button" aria-pressed="${r.status===s.id}" onclick="changeOrderStatus('${r.id}','${s.id}')">${s.label}</button>`).join("")}
+      </div>
+      ${msg?`<p class="send-err" style="margin-top:12px">${esc(msg)}</p>`:""}
+    </div>`;
+}
+async function changeOrderStatus(id, status){
+  const r=adm.rows.find(x=>String(x.id)===String(id));
+  if(!r || r.status===status) return;
+  const client=getSupabaseClient();
+  if(!client){ renderOrderDetail("Нет связи с базой. Попробуйте ещё раз."); return; }
+  const pick=document.getElementById("admStatusPick");
+  if(pick) pick.querySelectorAll("button").forEach(b=>b.disabled=true);
+  try{
+    const {error}=await client.from(SUPABASE_TABLE).update({status:status}).eq("id", r.id);
+    if(error){
+      console.error(
+        "Supabase: статус не сохранён.",
+        "\n  message:", error.message,
+        "\n  details:", error.details,
+        "\n  hint:",    error.hint,
+        "\n  code:",    error.code,
+        "\n  объект ошибки целиком:", error
+      );
+      renderOrderDetail("Не удалось изменить статус. Попробуйте ещё раз.");
+      return;
+    }
+    r.status=status;                 // сохранилось — только теперь меняем на экране
+    renderOrderDetail();
+    renderAdmin();
+  }catch(e){
+    console.error("Supabase: запрос смены статуса не дошёл", e);
+    renderOrderDetail("Не удалось изменить статус. Проверьте интернет.");
+  }finally{
+    const p=document.getElementById("admStatusPick");
+    if(p) p.querySelectorAll("button").forEach(b=>b.disabled=false);
+  }
+}
+
+/* Escape в админке: сначала закрываем подробности, потом окно входа.
+   Магазинный обработчик Escape не тронут — он работает со своей шторкой. */
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape") return;
+  if(document.getElementById("admDetail").classList.contains("open")){ closeOrderDetail(); }
+  else if(document.getElementById("adminAuth").classList.contains("open")){ closeAdminAuth(); }
+  if(!document.getElementById("adminApp").hidden) document.body.style.overflow="hidden";
+});
+
+/* ---- выгрузка CSV (текущий период) ---- */
+function csvCell(v){
+  const s=String(v==null?"":v).replace(/"/g,'""');
+  return '"'+s+'"';
+}
+function downloadOrdersCsv(){
+  const list=admVisible();
+  if(!list.length) return;
+  const head=["Номер заказа","Дата","Имя","Телефон","Получение","Адрес","Состав заказа",
+              "Стоимость товаров","Доставка","Итого","Статус","Комментарий"];
+  const rows=list.map(r=>[
+    r.order_number,
+    new Date(r.created_at).toLocaleString("ru-RU"),
+    r.customer_name,
+    r.phone,
+    admWay(r),
+    r.delivery_type==="pickup" ? SHOP.pickupPoint : (r.address||""),
+    admItems(r).map(i=>`${i.name} ${i.variant} x${i.qty} = ${i.sum}`).join("; "),
+    r.goods_total, r.delivery_price, r.total,
+    stLabel(r.status),
+    r.comment||""
+  ]);
+  const csv="﻿"+[head,...rows].map(row=>row.map(csvCell).join(";")).join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  const per=(PERIODS.find(p=>p.id===adm.period)||{label:""}).label.toLowerCase().replace(/\s/g,"-");
+  a.href=url; a.download=`kilo-zakazy-${per}-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
 /* ---- старт ---- */
