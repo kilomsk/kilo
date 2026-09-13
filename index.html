@@ -8,9 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800;900&family=Onest:wght@400;500;600&display=swap">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>:root{color-scheme:light}</style>
 </head>
 <body>
+<!-- Supabase JS SDK v2 — заказы пишутся прямо из браузера в public.orders.
+     defer: не блокирует отрисовку, к моменту оформления заказа уже загружен. -->
 <style>
 /* ============================================================
    КИЛО — визуальная система построена на существующей упаковке:
@@ -294,6 +297,12 @@ h2{font-size:26px;font-weight:800;line-height:1.1}
 .field.err .err-msg{display:block}
 .pickup-note{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;font-size:14.5px;margin-bottom:13px}
 .consent{font-size:12.5px;color:var(--ink-soft);margin:10px 0 0;text-align:center}
+.send-err{
+  display:block;margin-bottom:12px;padding:11px 13px;border-radius:var(--r);
+  background:#FDF3EC;border:1px solid var(--warn);color:var(--warn);
+  font-size:13.5px;line-height:1.4;
+}
+.send-err[hidden]{display:none}
 
 /* ---------- успех ---------- */
 .done{text-align:center;padding:12px 4px 4px}
@@ -512,6 +521,70 @@ const SHOP = {
      и впишите её адрес сюда. ТОКЕН БОТА ВО FRONTEND НЕ КЛАСТЬ. */
   orderEndpoint: ""        // например: "/api/order"
 };
+
+/* ============================================================
+   1a. SUPABASE — журнал заказов (таблица public.orders).
+   Сюда вписывается ТОЛЬКО publishable-ключ (anon).
+   SECRET-ключ, service_role и пароль базы во frontend НЕ КЛАСТЬ:
+   всё, что здесь написано, видно любому посетителю сайта.
+   Доступ ограничивается политиками RLS на стороне Supabase:
+   для таблицы orders достаточно разрешить INSERT роли anon.
+   ============================================================ */
+const SUPABASE_URL = "https://ibtpbfxdvqaxqaqspwml.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "ВСТАВЬ_СЮДА_МОЙ_ПОЛНЫЙ_SB_PUBLISHABLE_KEY";
+const SUPABASE_TABLE = "orders";
+
+/* Клиент создаётся лениво: если CDN не ответил, страница продолжает
+   работать — каталог и корзина от Supabase не зависят. */
+let supabaseClient = null;
+function getSupabaseClient(){
+  if(supabaseClient) return supabaseClient;
+  if(typeof supabase === "undefined" || typeof supabase.createClient !== "function") return null;
+  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  return supabaseClient;
+}
+const supabaseConfigured = () =>
+  /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(SUPABASE_URL) &&
+  SUPABASE_PUBLISHABLE_KEY.length > 20 &&
+  !/ВСТАВЬ|YOUR_|PUBLISHABLE_KEY$/i.test(SUPABASE_PUBLISHABLE_KEY);
+
+/* Запись заказа. Возвращает {ok:true} либо {ok:false, reason}.
+   Данные берутся из готового объекта o — второй раз ничего не собираем. */
+async function saveOrderToSupabase(o){
+  if(!supabaseConfigured()){
+    console.error("Supabase: не заполнен SUPABASE_PUBLISHABLE_KEY — заказ сохранить некуда.");
+    return {ok:false, reason:"config"};
+  }
+  const client = getSupabaseClient();
+  if(!client){
+    console.error("Supabase: SDK не загрузился (проверьте доступ к cdn.jsdelivr.net).");
+    return {ok:false, reason:"sdk"};
+  }
+  try{
+    const { error } = await client.from(SUPABASE_TABLE).insert({
+      order_number:   String(o.number),
+      customer_name:  o.name,
+      phone:          o.phone,
+      delivery_type:  o.mode,
+      address:        o.address || null,
+      comment:        o.comment || null,
+      items:          o.items,          // jsonb
+      goods_total:    o.goods,
+      delivery_price: o.shipping,
+      total:          o.total,
+      status:         "new"
+    });
+    if(error){
+      console.error("Supabase: заказ не сохранён", error);
+      return {ok:false, reason:"insert", error};
+    }
+    return {ok:true};
+  }catch(e){
+    /* обрыв сети, блокировщик, CORS — insert может не вернуть error, а упасть */
+    console.error("Supabase: запрос не дошёл", e);
+    return {ok:false, reason:"network", error:e};
+  }
+}
 
 /* ============================================================
    2. ТОВАРЫ  —  единственное место, где меняется ассортимент.
@@ -749,6 +822,7 @@ function renderSheet(){
     </div>
     <p class="consent">Оплата при получении. Мы подтвердим заказ в Telegram.</p>`;
   foot.innerHTML=`
+    <div class="send-err" id="sendErr" role="alert" hidden></div>
     <button class="btn" style="width:100%" id="sendBtn" onclick="submitOrder()">Отправить заказ</button>
     <button class="del" style="display:block;width:100%;margin-top:12px;text-align:center" onclick="openSheet('cart')">Вернуться в корзину</button>`;
 
@@ -760,6 +834,12 @@ function renderSheet(){
   });
 }
 function setMode(m){ state.mode=m; renderSheet(); renderBar(); }
+function showSendError(msg){
+  const el=document.getElementById("sendErr");
+  if(!el) return;
+  el.textContent=msg||"";
+  el.hidden=!msg;
+}
 
 /* ---- телефон ---- */
 function maskPhone(v){
@@ -793,6 +873,10 @@ function buildTelegramOrderLink(o){
   const base = SHOP.telegramDirect || SHOP.telegram;
   const text = o && o.text ? o.text : "";
   if(!text) return base;
+  /* Собираем вручную, а не через URL.searchParams: тот пересобирает всю
+     строку запроса и превращает флаг «direct» в «direct=». Здесь параметры
+     базовой ссылки остаются как есть, а text корректно дописывается
+     через «&» — получается ...?direct&text=..., а не ...?direct?text=... */
   const [path, query] = base.split("#")[0].split("?");
   const params = (query||"").split("&").filter(p => p && !/^text=/i.test(p));
   params.push("text=" + encodeURIComponent(text));   // кириллица, переносы, ₽ — всё кодируется
@@ -854,7 +938,8 @@ async function submitOrder(){
   if(bad){ bad.focus(); bad.scrollIntoView({block:"center",behavior:"smooth"}); return; }
 
   const btn=document.getElementById("sendBtn");
-  state.sending=true; btn.disabled=true; btn.textContent="Отправляем…";
+  state.sending=true; btn.disabled=true; btn.textContent="Сохраняем заказ…";
+  showSendError("");
 
   const o={
     number:orderNumber(),
@@ -868,6 +953,18 @@ async function submitOrder(){
     createdAt:new Date().toISOString()
   };
   o.text=orderText(o);
+
+  /* Сначала заказ должен лечь в Supabase — пока строки нет, заказ не принят. */
+  const saved=await saveOrderToSupabase(o);
+  if(!saved.ok){
+    btn.disabled=false; btn.textContent="Отправить заказ";
+    state.sending=false;
+    showSendError(saved.reason==="config"||saved.reason==="sdk"
+      ? "Заказ временно не оформляется. Напишите нам в Telegram — примем вручную."
+      : "Не удалось сохранить заказ. Проверьте интернет и попробуйте ещё раз.");
+    return;
+  }
+  o.savedAt=new Date().toISOString();
 
   try{
     if(SHOP.orderEndpoint){
@@ -890,7 +987,7 @@ async function submitOrder(){
   }catch(e){
     btn.disabled=false; btn.textContent="Отправить заказ";
     state.sending=false;
-    alert("Не получилось отправить заказ. Проверьте связь и попробуйте ещё раз — или напишите нам в Telegram.");
+    showSendError("Не получилось отправить заказ. Проверьте связь и попробуйте ещё раз — или напишите нам в Telegram.");
     return;
   }
   state.sending=false;
@@ -907,17 +1004,10 @@ function renderDone(body,foot,title){
       ${o.sent
         ? `<p style="margin:0;color:var(--ink-2);font-size:15px">Мы уже получили заказ и напишем вам в Telegram, чтобы подтвердить дату доставки.</p>`
         : `<div class="steps">
-             <p class="steps-lead">${o.copied
-               ? "Текст заказа уже скопирован. Осталось передать его нам — это три коротких шага:"
-               : "Заказ готов к отправке. Осталось передать его нам — это три коротких шага:"}</p>
-             <ol>
-               <li>Нажмите <b>«Открыть Telegram»</b> — нужный чат откроется сам.</li>
-               <li><b>Вставьте текст заказа в поле сообщения.</b> Задержите палец на поле ввода и выберите «Вставить» (на компьютере — Ctrl+V или ⌘+V).</li>
-               <li>Нажмите отправить — и мы сразу возьмём заказ в работу.</li>
-             </ol>
-             <p class="steps-warn">Пока сообщение не отправлено, заказ до нас не дойдёт.</p>
-             <details class="fallback" ${o.copied?"":"open"}>
-               <summary>Показать текст заказа</summary>
+             <p class="steps-lead">Заказ сохранён. Нажмите «Открыть Telegram» — сообщение уже подготовлено, останется только отправить его.</p>
+             <p class="steps-warn">Пока сообщение не отправлено, мы не узнаем, что вы готовы его получить.</p>
+             <details class="fallback">
+               <summary>Поле ввода пустое? Вставить текст вручную</summary>
                <div class="receipt" style="white-space:pre-wrap;font-size:13.5px;line-height:1.45;margin-top:10px">${esc(o.text)}</div>
                <button class="del" type="button" style="margin-top:10px" onclick="copyOrderText(this)">Скопировать текст заказа</button>
              </details>
